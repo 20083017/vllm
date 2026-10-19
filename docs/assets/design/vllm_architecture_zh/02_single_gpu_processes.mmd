@@ -1,0 +1,18 @@
+flowchart LR
+    User["客户端"]
+    subgraph P0["进程 A: API Server"]
+        HTTP["Uvicorn / FastAPI"]
+        AL["AsyncLLM 与 EngineCoreClient"]
+        HTTP <--> AL
+    end
+    subgraph P1["进程 B: EngineCore"]
+        IO["输入 / 输出 IO 线程"]
+        SC["主线程: Scheduler"]
+        UE["UniProcExecutor"]
+        GW["GPU Worker 与 Model Runner"]
+        IO <--> SC
+        SC --> UE --> GW
+    end
+    User <-->|HTTP| HTTP
+    AL <-->|ZMQ IPC| IO
+    GW --> Device["GPU 0"]

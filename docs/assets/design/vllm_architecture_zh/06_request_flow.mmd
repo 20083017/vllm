@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant U as 客户端
+    participant A as API 与 AsyncLLM
+    participant P as Renderer 与 InputProcessor
+    participant C as EngineCoreClient
+    participant E as EngineCore 与 Scheduler
+    participant W as Executor 与 Worker
+    participant O as OutputProcessor
+    U->>A: 提交生成请求
+    A->>P: 渲染和分词，处理输入
+    P-->>A: 引擎输入
+    A->>O: 注册请求与输出 collector
+    A->>C: add_request_async
+    C->>E: ZMQ ADD 消息
+    E->>E: 请求入队，等待 token 和 KV 预算
+    loop 多个调度轮次，直到结束
+        E->>E: schedule 与 KV 块分配
+        E->>W: SchedulerOutput
+        W->>W: 准备输入，forward 与采样
+        W-->>E: ModelRunnerOutput
+        E->>E: 更新请求状态与完成状态
+        E-->>C: EngineCoreOutputs
+        C-->>O: 异步结果队列与 output_handler
+        O-->>A: 请求级增量结果
+        A-->>U: 流式发送可用内容
+        break 断连、取消或前端 stop string 提前终止
+            A->>C: abort
+            C->>E: ABORT 消息
+            E->>E: 终止后续调度并回收可释放资源
+        end
+    end
+    E->>E: 正常结束路径释放请求对 KV 块的引用
+    A-->>U: 正常完成响应

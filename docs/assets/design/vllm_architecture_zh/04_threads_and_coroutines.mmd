@@ -1,0 +1,18 @@
+flowchart LR
+    AP["API 的 asyncio 请求任务"] -->|ZMQ| RX
+    subgraph CORE["EngineCore 进程"]
+        RX["输入 IO 线程"] --> IQ["queue.Queue: input_queue"]
+        IQ --> MAIN["主线程: 请求处理 / 调度 / 执行"]
+        MAIN --> OQ["queue.Queue: output_queue"]
+        OQ --> TX["输出 IO 线程"]
+        MON["监控与信号线程"] -. "状态 / 唤醒" .-> MAIN
+        MAIN --> EX["Executor"]
+        EX --> UNI["uni: 当前线程调用 Worker"]
+    end
+    TX -->|ZMQ| RES["API 的结果接收与分发 Task"]
+    EX -->|mp 广播消息| MP
+    subgraph WP["WorkerProc 进程，仅 mp 路径"]
+        MP["主线程: 调用 Worker"]
+    end
+    MP --> GPU["提交 GPU 工作"]
+    UNI --> GPU

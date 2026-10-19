@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant C as CPU 调度与输入准备
+    participant G as GPU 执行流
+    participant R as 结果回收路径
+    C->>G: 提交 batch N
+    par GPU 运行
+        G->>G: 执行 N 的 kernel
+    and CPU 继续推进
+        C->>C: 准备 N+1 的可提前确定部分
+        C->>G: 提交 N+1，设备侧保留执行依赖
+    end
+    G-->>R: N 的结果可用
+    G->>G: 满足依赖后执行 N+1
+    R-->>C: 回收 N，更新需要结果的状态

@@ -1,0 +1,11 @@
+flowchart TD
+    CLI["vllm serve: 解析参数"] --> Launch["选择前端与 API 数量"]
+    Launch --> CFG["构建并校验 VllmConfig，选择 executor"]
+    CFG --> Client["创建 AsyncLLM 与 EngineCoreClient"]
+    Client --> Spawn["启动 EngineCore 并完成初始握手"]
+    Spawn --> Worker["初始化 Worker / 设备 / 分布式组"]
+    Worker --> Load["加载模型权重"]
+    Load --> Memory["探测可用显存并确定 KV Cache 配置"]
+    Memory --> Warm["初始化 KV / 编译 / 预热与图捕获"]
+    Warm --> Ready["完成引擎就绪与正式数据连接就绪"]
+    Ready --> HTTP["HTTP 服务开始接受推理请求"]

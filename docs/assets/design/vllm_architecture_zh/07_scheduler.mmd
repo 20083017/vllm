@@ -1,0 +1,16 @@
+flowchart TD
+    Start["进入一轮调度"] --> Budget["建立 token / encoder 等预算"]
+    Budget --> Running["遍历 running 请求，计算本轮 token 数"]
+    Running --> Allocate{"KV 块能够分配？"}
+    Allocate -->|是| Add["加入本轮 SchedulerOutput，扣减预算"]
+    Allocate -->|否| Preempt["按策略抢占请求并释放其 KV 引用"]
+    Preempt --> Retry["重试分配或停止该部分调度"]
+    Retry --> Waiting
+    Add --> Waiting{"还有预算、槽位且允许接纳 waiting？"}
+    Waiting -->|是| Cache["检查前缀命中及外部 KV 状态"]
+    Cache --> New["为可接纳请求分配块与 token 配额"]
+    New --> Execute["Executor 执行本轮 batch"]
+    Waiting -->|否| Execute
+    Execute --> Result["处理采样结果、更新状态"]
+    Result --> Finish["完成请求清理；未完成请求留待后续轮次"]
+    Finish --> Next["进入下一轮或等待新消息"]

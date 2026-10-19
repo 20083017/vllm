@@ -1,0 +1,22 @@
+flowchart TD
+    A["API Server 进程"] <-->|ZMQ| E
+    subgraph EC["EngineCore 进程"]
+        E["IO 线程与输入输出队列"]
+        S["主线程: Scheduler 与 EngineCore.step"]
+        X["MultiprocExecutor"]
+        E <--> S
+        S --> X
+    end
+    X -->|广播 RPC| W0
+    X -->|广播 RPC| W1
+    subgraph WP0["WorkerProc 0"]
+        W0["主线程: worker_busy_loop"] --> R0["Worker / Model Runner"]
+    end
+    subgraph WP1["WorkerProc 1"]
+        W1["主线程: worker_busy_loop"] --> R1["Worker / Model Runner"]
+    end
+    R0 --> G0["GPU 0"]
+    R1 --> G1["GPU 1"]
+    W0 -. "响应队列" .-> X
+    W1 -. "按调用需要返回响应" .-> X
+    G0 <-->|设备间张量通信| G1

@@ -1,0 +1,23 @@
+flowchart TD
+    Client["HTTP 客户端"] --> API["API Server 与协议适配"]
+    Offline["Python LLM 离线调用"] --> Sync["LLMEngine 同步前端"]
+    API --> Async["AsyncLLM 异步前端"]
+    Async --> Input["Renderer 与 InputProcessor"]
+    Sync --> Input
+    Input --> CoreClient["EngineCoreClient"]
+    CoreClient --> Core["EngineCore"]
+    Core --> Scheduler["Scheduler / AsyncScheduler"]
+    Scheduler <--> KV["KVCacheManager 与 BlockPool"]
+    Core --> Executor["Executor: uni / mp / ray"]
+    Executor --> Worker["Worker: 设备与模型生命周期"]
+    Worker --> Runner["Model Runner: batch 与执行"]
+    Runner --> Model["模型层与采样"]
+    Model --> Backend["Attention / GEMM / 通信 backend"]
+    Backend --> GPU["GPU"]
+    Runner -. "ModelRunnerOutput" .-> Core
+    Core -. "EngineCoreOutputs" .-> CoreClient
+    CoreClient -.-> Output["OutputProcessor 与 Detokenizer"]
+    Output -. "请求级结果" .-> Async
+    Output -. "请求级结果" .-> Sync
+    Async -. "流式或完整响应" .-> API
+    API -.-> Client
